@@ -43,10 +43,18 @@ class _GamesGridBoradState extends State<GamesGridBorad> {
   ];
 
   void onUserClick(int row, int col) async {
-    if (gameState[row][col] == "-") {
-      setState(() {
-        gameState[row][col] = "X";
-      });
+    if (gameState[row][col] != "-") {
+      return;
+    }
+    setState(() {
+      gameState[row][col] = "X";
+    });
+
+    // check win condition after user move and also after AI move:
+
+    if (checkWin("X")) {
+      print("User wins");
+      return;
     }
 
     // converting gameState to String format which will be accepted by the Ai:
@@ -70,6 +78,42 @@ class _GamesGridBoradState extends State<GamesGridBorad> {
     } else {
       print("AI Response is null");
     }
+
+    if (checkWin("O")) {
+      print("Ai won");
+      return;
+    }
+
+    if (!gameState.expand((e) => e).contains("-")) {
+      print("match draw");
+      return;
+    }
+
+    print("game is going on");
+  }
+
+  bool checkWin(String player) {
+    for (int i = 0; i < 3; i++) {
+      if (gameState[i][0] == player &&
+          gameState[i][1] == player &&
+          gameState[i][2] == player) {
+        return true;
+      }
+    }
+    for (int i = 0; i < 3; i++) {
+      if (gameState[0][i] == player &&
+          gameState[1][i] == player &&
+          gameState[2][i] == player) {
+        return true;
+      }
+    }
+    if (gameState[0][0] == player &&
+        gameState[1][1] == player &&
+        gameState[2][2] == player) {
+      return true;
+    }
+
+    return false;
   }
 
 // problems I noticed:
@@ -77,6 +121,7 @@ class _GamesGridBoradState extends State<GamesGridBorad> {
 // 2. send game state to ai again if the move getting which is already made by the user.
 // 3. apply win condition.
 // 4. add transitions and animation to text.
+// 5. don't allow user click if he had already clicked on the container.
 
   @override
   Widget build(BuildContext context) {

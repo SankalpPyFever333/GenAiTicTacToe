@@ -11,7 +11,7 @@ void main() async {
   final apiKey = dotenv.env['APIKEY'];
   if (apiKey == null) {
     stderr.writeln(
-        r'No $AIzaSyB8V5T6JwZgA7DclAszArD_Zu94EuhupJI environment variable');
+        r'No environment variable');
     exit(1);
   }
   
