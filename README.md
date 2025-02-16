@@ -14,7 +14,7 @@
 
 ## Videos
 
-![video](https://github.com/SankalpPyFever333/GenAiTicTacToe/blob/main/assets/AppVideosAndSS/tictactoe%20-%20GenAI.mp4)
+![Image](https://github.com/SankalpPyFever333/GenAiTicTacToe/blob/main/assets/AppVideosAndSS/AI_WinsImage.png)
 
 
 
