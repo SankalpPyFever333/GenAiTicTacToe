@@ -25,7 +25,7 @@ Follow these steps to set up and run the Tic-Tac-Toe app locally:
 ### 1️⃣ Clone the Repository  
 📥 Clone the project and navigate to the directory:  
 ```sh
-git clone <https://github.com/SankalpPyFever333/GenAiTicTacToe.git>
+git clone https://github.com/SankalpPyFever333/GenAiTicTacToe.git
 ```
 ### 🛠️ setup env
 ```
