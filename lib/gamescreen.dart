@@ -1,6 +1,5 @@
 import 'package:advanced_tic_tac_toe/genai.dart';
 import 'package:flutter/material.dart';
-
 import 'package:audioplayers/audioplayers.dart';
 
 class GamesGridBorad extends StatefulWidget {
@@ -13,48 +12,51 @@ class GamesGridBorad extends StatefulWidget {
 
 class _GamesGridBoradState extends State<GamesGridBorad>
     with TickerProviderStateMixin {
-  // defining board state:
   late List<List<String>> gameState;
   late AnimationController _animationController;
   final AudioPlayer _audioPlayer = AudioPlayer();
-
-  bool showText = false;
-
   bool isAiResponds = false;
-  String? aiResponse;
+  bool gameEnded = false;
+
+  @override
+  void initState() {
+    super.initState();
+    _animationController = AnimationController(
+      duration: const Duration(milliseconds: 500),
+      vsync: this,
+    )..forward(); // Start animation
+    resetGame();
+  }
 
   void onUserClick(int row, int col) async {
-    if (gameState[row][col] != "-" || isAiResponds) {
-      return;
-    }
+    if (gameState[row][col] != "-" || isAiResponds || gameEnded) return;
+
     setState(() {
       gameState[row][col] = "X";
-      playPopSound();
       isAiResponds = true;
+      playPopSound();
     });
 
-    // check win condition after user move and also after AI move:
-
     if (checkWin("X")) {
-      debugPrint("User wins");
-
+      showWinAnimation("User Wins! 🎉");
       return;
     }
 
-    // converting gameState to String format which will be accepted by the Ai:
-    String currentState = gameState.map((row) => row.join(' ')).join('\n');
+    await Future.delayed(
+        const Duration(milliseconds: 500)); // Simulate AI delay
 
-    // send this state to Ai:
-    String? aiResponse;
-    List<int> aiMove;
+    String currentState = gameState.map((row) => row.join(' ')).join('\n');
+    List<int>? aiMove;
+    int retryCount = 0;
 
     do {
-      aiResponse = await widget.ai.sendGameState(currentState);
+      String? aiResponse = await widget.ai.sendGameState(currentState);
       if (aiResponse == null) {
-        debugPrint("AI is not responding");
-        isAiResponds = false;
+        debugPrint("AI did not respond.");
+        setState(() => isAiResponds = false);
         return;
       }
+
       aiMove = aiResponse
           .replaceAll('(', '')
           .replaceAll(')', '')
@@ -62,114 +64,104 @@ class _GamesGridBoradState extends State<GamesGridBorad>
           .map(int.parse)
           .toList();
 
-      print(aiMove);
-    } while (gameState[aiMove[0]][aiMove[1]] != "-");
+      retryCount++;
+    } while (retryCount < 5 && (gameState[aiMove[0]][aiMove[1]] != "-"));
 
-    setState(() {
-      gameState[aiMove[0]][aiMove[1]] = "O";
-      playPopSound();
-      isAiResponds = false;
-    });
+    if (aiMove.isNotEmpty && gameState[aiMove[0]][aiMove[1]] == "-") {
+      setState(() {
+        gameState[aiMove![0]][aiMove[1]] = "O";
+        isAiResponds = false;
+        playPopSound();
+      });
 
-    if (checkWin("O")) {
-      debugPrint("Ai won");
-      return;
+      if (checkWin("O")) {
+        showWinAnimation("AI Wins! 🤖");
+        return;
+      }
     }
 
     if (!gameState.expand((e) => e).contains("-")) {
-      debugPrint("match draw");
-      return;
+      showWinAnimation("It's a Draw! 🤝");
     }
-
-    debugPrint("game is going on");
   }
 
   void resetGame() {
     setState(() {
       gameState = List.generate(3, (_) => List.generate(3, (_) => '-'));
       isAiResponds = false;
+      gameEnded = false;
     });
-  }
-
-  @override
-  void initState() {
-    super.initState();
-    _animationController = AnimationController(
-      duration: const Duration(milliseconds: 300),
-      vsync: this,
-    );
-    resetGame();
   }
 
   bool checkWin(String player) {
     for (int i = 0; i < 3; i++) {
       if (gameState[i][0] == player &&
           gameState[i][1] == player &&
-          gameState[i][2] == player) {
-        return true;
-      }
-    }
-    for (int i = 0; i < 3; i++) {
+          gameState[i][2] == player) return true;
       if (gameState[0][i] == player &&
           gameState[1][i] == player &&
-          gameState[2][i] == player) {
-        return true;
-      }
+          gameState[2][i] == player) return true;
     }
-    if (gameState[0][0] == player &&
-        gameState[1][1] == player &&
-        gameState[2][2] == player) {
-      return true;
-    }
-    if (gameState[0][2] == player &&
-        gameState[1][1] == player &&
-        gameState[2][0] == player) {
-      return true;
-    }
-
-    return false;
+    return (gameState[0][0] == player &&
+            gameState[1][1] == player &&
+            gameState[2][2] == player) ||
+        (gameState[0][2] == player &&
+            gameState[1][1] == player &&
+            gameState[2][0] == player);
   }
 
   Future<void> playPopSound() async {
-    await _audioPlayer.play(AssetSource('sounds/pop.wav')); // Play pop sound
+    await _audioPlayer.play(AssetSource('sounds/pop.wav'));
   }
 
-// problems I noticed:
-//  1.stop user's move until we get the response from ai.
-// 2. send game state to ai again if the move getting which is already made by the user.
-// 4. add transitions and animation to text.
-// 5. don't allow user click if he had already clicked on the container.
+  void showWinAnimation(String message) {
+    setState(() {
+      gameEnded = true;
+    });
+
+    showDialog(
+      context: context,
+      barrierDismissible: false,
+      builder: (context) => AlertDialog(
+        title: const Text("Game Over"),
+        content: Text(
+          message,
+          style: const TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () {
+              resetGame();
+              Navigator.pop(context);
+            },
+            child: const Text("Play Again"),
+          ),
+        ],
+      ),
+    );
+  }
 
   @override
   Widget build(BuildContext context) {
-    double gridSize =
-        MediaQuery.of(context).size.width / 4; // Responsive grid size
+    double gridSize = MediaQuery.of(context).size.width / 4;
     return Scaffold(
       backgroundColor: Colors.white,
       body: Center(
         child: Column(
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
-            // Add Text Transition Animation for "Tic Tac Toe" Title
-            AnimatedBuilder(
-              animation: _animationController,
-              builder: (context, child) {
-                return Opacity(
-                  opacity: _animationController.value,
-                  child: Text(
-                    'Tic Tac Toe',
-                    style: TextStyle(
-                      fontSize: 32,
-                      fontWeight: FontWeight.bold,
-                      color: Colors.purple.shade700,
-                    ),
-                  ),
-                );
-              },
+            ScaleTransition(
+              scale: _animationController,
+              child: Text(
+                'Tic Tac Toe',
+                style: TextStyle(
+                  fontSize: 32,
+                  fontWeight: FontWeight.bold,
+                  color: Colors.purple.shade700,
+                ),
+              ),
             ),
             const SizedBox(height: 20),
-
-            // Game Grid
             SizedBox(
               width: gridSize,
               height: gridSize,
@@ -184,11 +176,7 @@ class _GamesGridBoradState extends State<GamesGridBorad>
                   int row = index ~/ 3;
                   int col = index % 3;
                   return GestureDetector(
-                    onTap: () => !isAiResponds
-                        ? onUserClick(row, col)
-                        : ScaffoldMessenger.of(context).showSnackBar(
-                            const SnackBar(
-                                content: Text("Wait , AI is responding"))),
+                    onTap: () => !isAiResponds ? onUserClick(row, col) : null,
                     child: AnimatedContainer(
                       duration: const Duration(milliseconds: 300),
                       decoration: BoxDecoration(
@@ -223,13 +211,9 @@ class _GamesGridBoradState extends State<GamesGridBorad>
                 },
               ),
             ),
-
-            // Add a Reset Button
             const SizedBox(height: 20),
             ElevatedButton(
-              onPressed: () {
-                setState(() => resetGame());
-              },
+              onPressed: () => resetGame(),
               style: ElevatedButton.styleFrom(
                 backgroundColor: Colors.purple.shade700,
                 padding:
@@ -249,6 +233,7 @@ class _GamesGridBoradState extends State<GamesGridBorad>
   @override
   void dispose() {
     _animationController.dispose();
+    _audioPlayer.dispose();
     super.dispose();
   }
 }
